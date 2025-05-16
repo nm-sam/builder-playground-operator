@@ -21,15 +21,15 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	// "k8s.io/apimachinery/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	// "sigs.k8s.io/controller-runtime/pkg/controller"
+	// "sigs.k8s.io/controller-runtime/pkg/manager"
+	// "sigs.k8s.io/controller-runtime/pkg/reconcile"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -66,7 +66,7 @@ func (r *BuilderPlaygroundDeploymentReconciler) Reconcile(ctx context.Context, r
 	return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	deploymentName := builderPlaygroundDeployment.Name + "-statefulset"
+	// deploymentName := builderPlaygroundDeployment.Name + "-statefulset"
 
 	existingSts := &appsv1.StatefulSet{}
 	err = r.Get(ctx, client.ObjectKey{Name: builderPlaygroundDeployment.Name, Namespace: builderPlaygroundDeployment.Namespace}, existingSts)
