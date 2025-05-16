@@ -60,7 +60,8 @@ func (r *BuilderPlaygroundDeploymentReconciler) Reconcile(ctx context.Context, r
 
 	// var builderPlaygroundDeployment  builderplaygroundv1alpha1.BuilderPlaygroundDeployment
 	builderPlaygroundDeployment :=  &builderplaygroundv1alpha1.BuilderPlaygroundDeployment {}
-	if err := r.Get(ctx, req.NamespacedName, builderPlaygroundDeployment); err != nil {
+	var err error
+	if err = r.Get(ctx, req.NamespacedName, builderPlaygroundDeployment); err != nil {
 	log.Error(err, "Failed to fetch BuilderPlaygroundDeployment")
 	return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
