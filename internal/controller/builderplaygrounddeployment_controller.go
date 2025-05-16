@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -67,7 +68,7 @@ func (r *BuilderPlaygroundDeploymentReconciler) Reconcile(ctx context.Context, r
 	deploymentName := builderPlaygroundDeployment.Name + "-statefulset"
 
 	existingSts := &appsv1.StatefulSet{}
-	err = r.Get(ctx, client.ObjectKey{Name: epg.Name, Namespace: epg.Namespace}, existingSts)
+	err = r.Get(ctx, client.ObjectKey{Name: builderPlaygroundDeployment.Name, Namespace: builderPlaygroundDeployment.Namespace}, existingSts)
 
 	if err == nil {
 		// Optionally handle updates if needed
