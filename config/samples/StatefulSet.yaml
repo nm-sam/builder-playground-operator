@@ -1,0 +1,240 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  creationTimestamp: "2025-05-20T07:23:12Z"
+  generation: 1
+  name: builder-playground-l1
+  namespace: dev-test
+  ownerReferences:
+  - apiVersion: builderplayground.flashbots.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: BuilderPlaygroundDeployment
+    name: builder-playground-l1
+    uid: d266dc1f-f063-4b5a-a636-caaf866fdc65
+  resourceVersion: "8370547"
+  uid: 7a2e4a35-c692-4a05-b87d-39f3209c5196
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: builder-playground-l1
+  serviceName: builder-playground-l1
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: builder-playground-l1
+    spec:
+      containers:
+      - args:
+        - node
+        - --chain
+        - '{{.Dir}}/genesis.json'
+        - --datadir
+        - '{{.Dir}}/data_reth'
+        - --color
+        - never
+        - --ipcpath
+        - '{{.Dir}}/reth.ipc'
+        - --addr
+        - 127.0.0.1
+        - --port
+        - '{{Port "rpc" 30303}}'
+        - --http
+        - --http.addr
+        - 0.0.0.0
+        - --http.api
+        - admin,eth,web3,net,rpc,mev,flashbots
+        - --http.port
+        - '{{Port "http" 8545}}'
+        - --authrpc.port
+        - '{{Port "authrpc" 8551}}'
+        - --authrpc.addr
+        - 0.0.0.0
+        - --authrpc.jwtsecret
+        - '{{.Dir}}/jwtsecret'
+        - --metrics
+        - 0.0.0.0:{{Port "metrics" 9090}}
+        - --engine.persistence-threshold
+        - "0"
+        - --engine.memory-block-buffer-target
+        - "0"
+        - -vvvv
+        command:
+        - /usr/local/bin/reth
+        image: ghcr.io/paradigmxyz/reth:v1.3.1
+        imagePullPolicy: IfNotPresent
+        name: el
+        ports:
+        - containerPort: 30303
+          name: rpc
+          protocol: TCP
+        - containerPort: 8545
+          name: http
+          protocol: TCP
+        - containerPort: 8551
+          name: authrpc
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      - args:
+        - bn
+        - --datadir
+        - '{{.Dir}}/data_beacon_node'
+        - --testnet-dir
+        - '{{.Dir}}/testnet'
+        - --enable-private-discovery
+        - --disable-peer-scoring
+        - --staking
+        - --enr-address
+        - 127.0.0.1
+        - --enr-udp-port
+        - '{{PortUDP "p2p-udp" 9000}}'
+        - --enr-tcp-port
+        - '{{Port "p2p" 9000}}'
+        - --enr-quic-port
+        - '{{Port "quic-p2p" 9100}}'
+        - --port
+        - '{{Port "p2p" 9000}}'
+        - --quic-port
+        - '{{Port "quic-p2p" 9100}}'
+        - --http
+        - --http-port
+        - '{{Port "http" 3500}}'
+        - --http-address
+        - 0.0.0.0
+        - --http-allow-origin
+        - '*'
+        - --disable-packet-filter
+        - --target-peers
+        - "0"
+        - --execution-endpoint
+        - '{{Service "el" "authrpc" "http"}}'
+        - --execution-jwt
+        - '{{.Dir}}/jwtsecret'
+        - --always-prepare-payload
+        - --prepare-payload-lookahead
+        - "8000"
+        - --suggested-fee-recipient
+        - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
+        - --builder
+        - '{{Service "mev-boost" "http" "http"}}'
+        - --builder-fallback-epochs-since-finalization
+        - "0"
+        - --builder-fallback-disable-checks
+        command:
+        - lighthouse
+        image: sigp/lighthouse:v7.0.0-beta.0
+        imagePullPolicy: IfNotPresent
+        name: beacon
+        ports:
+        - containerPort: 9000
+          name: p2p-udp
+          protocol: UDP
+        - containerPort: 9000
+          name: p2p
+          protocol: TCP
+        - containerPort: 9100
+          name: quic-p2p
+          protocol: TCP
+        - containerPort: 3500
+          name: http
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      - args:
+        - vc
+        - --datadir
+        - '{{.Dir}}/data_validator'
+        - --testnet-dir
+        - '{{.Dir}}/testnet'
+        - --init-slashing-protection
+        - --beacon-nodes
+        - '{{Service "beacon" "http" "http"}}'
+        - --suggested-fee-recipient
+        - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
+        - --builder-proposals
+        - --prefer-builder-proposals
+        command:
+        - lighthouse
+        image: sigp/lighthouse:v7.0.0-beta.0
+        imagePullPolicy: IfNotPresent
+        name: validator
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      - args:
+        - --api-listen-addr
+        - 0.0.0.0
+        - --api-listen-port
+        - '{{Port "http" 5555}}'
+        - --beacon-client-addr
+        - '{{Service "beacon" "http" "http"}}'
+        - --validation-server-addr
+        - '{{Service "el" "http" "http"}}'
+        command:
+        - mev-boost-relay
+        env:
+        - name: ALLOW_SYNCING_BEACON_NODE
+          value: "1"
+        image: docker.io/flashbots/playground-utils:latest
+        imagePullPolicy: Always
+        name: mev-boost
+        ports:
+        - containerPort: 5555
+          name: http
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - test -d /artifacts
+        image: busybox:1.37
+        imagePullPolicy: IfNotPresent
+        name: check-artifacts-dir
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /home/ubuntu/my-builder-testnet-2
+          type: Directory
+        name: artifacts
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate

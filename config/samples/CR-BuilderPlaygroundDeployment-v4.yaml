@@ -1,0 +1,162 @@
+apiVersion: builderplayground.flashbots.io/v1alpha1
+kind: BuilderPlaygroundDeployment
+metadata:
+  creationTimestamp: null
+  name: example-deployment
+  namespace: dev-test
+spec:
+  recipe: ""
+  services:
+  - args:
+    - node
+    - --chain
+    - /data/genesis.json
+    - --datadir
+    - /data_reth
+    - --color
+    - never
+    - --ipcpath
+    - /data_reth/reth.ipc
+    - --addr
+    - 127.0.0.1
+    - --port
+    - '{{Port "rpc" 30303}}'
+    - --http
+    - --http.addr
+    - 0.0.0.0
+    - --http.api
+    - admin,eth,web3,net,rpc,mev,flashbots
+    - --http.port
+    - '{{Port "http" 8545}}'
+    - --authrpc.port
+    - '{{Port "authrpc" 8551}}'
+    - --authrpc.addr
+    - 0.0.0.0
+    - --authrpc.jwtsecret
+    - /data/jwtsecret
+    - --metrics
+    - 0.0.0.0:{{Port "metrics" 9090}}
+    - --engine.persistence-threshold
+    - "0"
+    - --engine.memory-block-buffer-target
+    - "0"
+    - -vvvv
+    entrypoint: /usr/local/bin/reth
+    image: ghcr.io/paradigmxyz/reth
+    name: el
+    ports:
+    - name: rpc
+      port: 30303
+      protocol: tcp
+    - name: http
+      port: 8545
+      protocol: tcp
+    - name: authrpc
+      port: 8551
+      protocol: tcp
+    - name: metrics
+      port: 9090
+      protocol: tcp
+    tag: v1.3.1
+  - args:
+    - bn
+    - --datadir
+    - /data_beacon
+    - --testnet-dir
+    - /data/testnet-dir
+    - --enable-private-discovery
+    - --disable-peer-scoring
+    - --staking
+    - --enr-address
+    - 127.0.0.1
+    - --enr-udp-port
+    - '{{PortUDP "p2p" 9000}}'
+    - --enr-tcp-port
+    - '{{Port "p2p" 9000}}'
+    - --enr-quic-port
+    - '{{Port "quic-p2p" 9100}}'
+    - --port
+    - '{{Port "p2p" 9000}}'
+    - --quic-port
+    - '{{Port "quic-p2p" 9100}}'
+    - --http
+    - --http-port
+    - '{{Port "http" 3500}}'
+    - --http-address
+    - 0.0.0.0
+    - --http-allow-origin
+    - '*'
+    - --disable-packet-filter
+    - --target-peers
+    - "0"
+    - --execution-endpoint
+    - '{{Service "el" "authrpc" "http" ""}}'
+    - --execution-jwt
+    - /data/jwtsecret
+    - --always-prepare-payload
+    - --prepare-payload-lookahead
+    - "8000"
+    - --suggested-fee-recipient
+    - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
+    - --builder
+    - '{{Service "mev-boost" "http" "http" ""}}'
+    - --builder-fallback-epochs-since-finalization
+    - "0"
+    - --builder-fallback-disable-checks
+    entrypoint: lighthouse
+    image: sigp/lighthouse
+    name: beacon
+    ports:
+    - name: p2p
+      port: 9000
+      protocol: udp
+    - name: p2p
+      port: 9000
+      protocol: tcp
+    - name: quic-p2p
+      port: 9100
+      protocol: tcp
+    - name: http
+      port: 3500
+      protocol: tcp
+    tag: v7.0.0-beta.0
+  - args:
+    - vc
+    - --datadir
+    - /data/validator
+    - --testnet-dir
+    - /data/testnet-dir
+    - --init-slashing-protection
+    - --beacon-nodes
+    - '{{Service "beacon" "http" "http" ""}}'
+    - --suggested-fee-recipient
+    - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
+    - --builder-proposals
+    - --prefer-builder-proposals
+    entrypoint: lighthouse
+    image: sigp/lighthouse
+    name: validator
+    tag: v7.0.0-beta.0
+  - args:
+    - --api-listen-addr
+    - 0.0.0.0
+    - --api-listen-port
+    - '{{Port "http" 5555}}'
+    - --beacon-client-addr
+    - '{{Service "beacon" "http" "http" ""}}'
+    - --validation-server-addr
+    - '{{Service "el" "http" "http" ""}}'
+    entrypoint: mev-boost-relay
+    env:
+      ALLOW_SYNCING_BEACON_NODE: "1"
+    image: docker.io/flashbots/playground-utils
+    name: mev-boost
+    ports:
+    - name: http
+      port: 5555
+      protocol: tcp
+    tag: latest
+  storage:
+    path: /home/ubuntu/my-builder-testnet-3
+    type: local-path
+status: {}

@@ -1,0 +1,268 @@
+{
+  "services": [
+    {
+      "args": [
+        "node",
+        "--chain",
+        "/artifacts/genesis.json",
+        "--datadir",
+        "/artifacts/data_reth",
+        "--color",
+        "never",
+        "--ipcpath",
+        "/artifacts/data_reth/reth.ipc",
+        "--addr",
+        "127.0.0.1",
+        "--port",
+        "30303",
+        "--http",
+        "--http.addr",
+        "0.0.0.0",
+        "--http.api",
+        "admin,eth,web3,net,rpc,mev,flashbots",
+        "--http.port",
+        "8545",
+        "--authrpc.port",
+        "8551",
+        "--authrpc.addr",
+        "0.0.0.0",
+        "--authrpc.jwtsecret",
+        "/artifacts/jwtsecret",
+        "--metrics",
+        "0.0.0.0:9090",
+        "--engine.persistence-threshold",
+        "0",
+        "--engine.memory-block-buffer-target",
+        "0",
+        "-vvvv"
+      ],
+      "component_name": "reth",
+      "entrypoint": "/usr/local/bin/reth",
+      "files_mapped": {
+        "/data/genesis.json": "genesis.json",
+        "/data/jwtsecret": "jwtsecret"
+      },
+      "image": "ghcr.io/paradigmxyz/reth",
+      "name": "el",
+      "ports": [
+        {
+          "HostPort": 0,
+          "Protocol": "tcp",
+          "name": "rpc",
+          "port": 30303
+        },
+        {
+          "HostPort": 0,
+          "Protocol": "tcp",
+          "name": "http",
+          "port": 8545
+        },
+        {
+          "HostPort": 0,
+          "Protocol": "tcp",
+          "name": "authrpc",
+          "port": 8551
+        },
+        {
+          "HostPort": 0,
+          "Protocol": "tcp",
+          "name": "metrics",
+          "port": 9090
+        }
+      ],
+      "tag": "v1.3.1",
+      "volumes_mapped": {
+        "/data_reth": "data"
+      }
+    },
+    {
+      "args": [
+        "bn",
+        "--datadir",
+        "/artifacts/data_beacon",
+        "--testnet-dir",
+        "/artifacts/testnet",
+        "--enable-private-discovery",
+        "--disable-peer-scoring",
+        "--staking",
+        "--enr-address",
+        "127.0.0.1",
+        "--enr-udp-port",
+        "9000",
+        "--enr-tcp-port",
+        "9000",
+        "--enr-quic-port",
+        "9100",
+        "--port",
+        "9000",
+        "--quic-port",
+        "9100",
+        "--http",
+        "--http-port",
+        "3500",
+        "--http-address",
+        "0.0.0.0",
+        "--http-allow-origin",
+        "*",
+        "--disable-packet-filter",
+        "--target-peers",
+        "0",
+        "--execution-endpoint",
+        "http://localhost:8551",
+        "--execution-jwt",
+        "/artifacts/jwtsecret",
+        "--always-prepare-payload",
+        "--prepare-payload-lookahead",
+        "8000",
+        "--suggested-fee-recipient",
+        "0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990",
+        "--builder",
+        "http://localhost:5555",
+        "--builder-fallback-epochs-since-finalization",
+        "0",
+        "--builder-fallback-disable-checks"
+      ],
+      "component_name": "lighthouse-beacon-node",
+      "entrypoint": "lighthouse",
+      "files_mapped": {
+        "/data/jwtsecret": "jwtsecret",
+        "/data/testnet-dir": "testnet"
+      },
+      "image": "sigp/lighthouse",
+      "name": "beacon",
+      "node_refs": [
+        {
+          "port_label": "authrpc",
+          "protocol": "http",
+          "service": "el",
+          "user": ""
+        },
+        {
+          "port_label": "http",
+          "protocol": "http",
+          "service": "mev-boost",
+          "user": ""
+        }
+      ],
+      "ports": [
+        {
+          "HostPort": 0,
+          "Protocol": "udp",
+          "name": "p2p",
+          "port": 9000
+        },
+        {
+          "HostPort": 0,
+          "Protocol": "tcp",
+          "name": "p2p",
+          "port": 9000
+        },
+        {
+          "HostPort": 0,
+          "Protocol": "tcp",
+          "name": "quic-p2p",
+          "port": 9100
+        },
+        {
+          "HostPort": 0,
+          "Protocol": "tcp",
+          "name": "http",
+          "port": 3500
+        }
+      ],
+      "ready_check": {
+        "interval": 1000000000,
+        "query_url": "http://localhost:3500/eth/v1/node/syncing",
+        "retries": 3,
+        "start_period": 1000000000,
+        "test": null,
+        "timeout": 30000000000
+      },
+      "tag": "v7.0.0-beta.0",
+      "volumes_mapped": {
+        "/data_beacon": "data"
+      }
+    },
+    {
+      "args": [
+        "vc",
+        "--datadir",
+        "/artifacts/data_validator",
+        "--testnet-dir",
+        "/artifacts/testnet",
+        "--init-slashing-protection",
+        "--beacon-nodes",
+        "http://localhost:3500",
+        "--suggested-fee-recipient",
+        "0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990",
+        "--builder-proposals",
+        "--prefer-builder-proposals"
+      ],
+      "component_name": "lighthouse-validator",
+      "entrypoint": "lighthouse",
+      "files_mapped": {
+        "/data/testnet-dir": "testnet",
+        "/data/validator": "data_validator"
+      },
+      "image": "sigp/lighthouse",
+      "name": "validator",
+      "node_refs": [
+        {
+          "port_label": "http",
+          "protocol": "http",
+          "service": "beacon",
+          "user": ""
+        }
+      ],
+      "tag": "v7.0.0-beta.0"
+    },
+    {
+      "args": [
+        "--api-listen-addr",
+        "0.0.0.0",
+        "--api-listen-port",
+        "5555",
+        "--beacon-client-addr",
+        "http://localhost:3500",
+        "--validation-server-addr",
+        "http://localhost:8545"
+      ],
+      "component_name": "mev-boost-relay",
+      "depends_on": [
+        {
+          "Condition": "service_healthy",
+          "Name": "beacon"
+        }
+      ],
+      "entrypoint": "mev-boost-relay",
+      "env": {
+        "ALLOW_SYNCING_BEACON_NODE": "1"
+      },
+      "image": "docker.io/flashbots/playground-utils",
+      "name": "mev-boost",
+      "node_refs": [
+        {
+          "port_label": "http",
+          "protocol": "http",
+          "service": "beacon",
+          "user": ""
+        },
+        {
+          "port_label": "http",
+          "protocol": "http",
+          "service": "el",
+          "user": ""
+        }
+      ],
+      "ports": [
+        {
+          "HostPort": 0,
+          "Protocol": "tcp",
+          "name": "http",
+          "port": 5555
+        }
+      ],
+      "tag": "latest"
+    }
+  ]
+}

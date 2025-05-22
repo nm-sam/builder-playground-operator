@@ -1,0 +1,268 @@
+{
+	"services": [
+		{
+			"name": "el",
+			"args": [
+				"node",
+				"--chain",
+				"/data/genesis.json",
+				"--datadir",
+				"/data_reth",
+				"--color",
+				"never",
+				"--ipcpath",
+				"/data_reth/reth.ipc",
+				"--addr",
+				"127.0.0.1",
+				"--port",
+				"30303",
+				"--http",
+				"--http.addr",
+				"0.0.0.0",
+				"--http.api",
+				"admin,eth,web3,net,rpc,mev,flashbots",
+				"--http.port",
+				"8545",
+				"--authrpc.port",
+				"8551",
+				"--authrpc.addr",
+				"0.0.0.0",
+				"--authrpc.jwtsecret",
+				"/data/jwtsecret",
+				"--metrics",
+				"0.0.0.0:9090",
+				"--engine.persistence-threshold",
+				"0",
+				"--engine.memory-block-buffer-target",
+				"0",
+				"-vvvv"
+			],
+			"ports": [
+				{
+					"name": "rpc",
+					"port": 30303,
+					"Protocol": "tcp",
+					"HostPort": 0
+				},
+				{
+					"name": "http",
+					"port": 8545,
+					"Protocol": "tcp",
+					"HostPort": 0
+				},
+				{
+					"name": "authrpc",
+					"port": 8551,
+					"Protocol": "tcp",
+					"HostPort": 0
+				},
+				{
+					"name": "metrics",
+					"port": 9090,
+					"Protocol": "tcp",
+					"HostPort": 0
+				}
+			],
+			"files_mapped": {
+				"/data/genesis.json": "genesis.json",
+				"/data/jwtsecret": "jwtsecret"
+			},
+			"volumes_mapped": {
+				"/data_reth": "data"
+			},
+			"component_name": "reth",
+			"tag": "v1.3.1",
+			"image": "ghcr.io/paradigmxyz/reth",
+			"entrypoint": "/usr/local/bin/reth"
+		},
+		{
+			"name": "beacon",
+			"args": [
+				"bn",
+				"--datadir",
+				"/data_beacon",
+				"--testnet-dir",
+				"/data/testnet-dir",
+				"--enable-private-discovery",
+				"--disable-peer-scoring",
+				"--staking",
+				"--enr-address",
+				"127.0.0.1",
+				"--enr-udp-port",
+				"9000",
+				"--enr-tcp-port",
+				"9000",
+				"--enr-quic-port",
+				"9100",
+				"--port",
+				"9000",
+				"--quic-port",
+				"9100",
+				"--http",
+				"--http-port",
+				"3500",
+				"--http-address",
+				"0.0.0.0",
+				"--http-allow-origin",
+				"*",
+				"--disable-packet-filter",
+				"--target-peers",
+				"0",
+				"--execution-endpoint",
+				"http://localhost:8551",
+				"--execution-jwt",
+				"/data/jwtsecret",
+				"--always-prepare-payload",
+				"--prepare-payload-lookahead",
+				"8000",
+				"--suggested-fee-recipient",
+				"0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990",
+				"--builder",
+				"http://localhost:5555",
+				"--builder-fallback-epochs-since-finalization",
+				"0",
+				"--builder-fallback-disable-checks"
+			],
+			"ready_check": {
+				"query_url": "http://localhost:3500/eth/v1/node/syncing",
+				"test": null,
+				"interval": 1000000000,
+				"start_period": 1000000000,
+				"timeout": 30000000000,
+				"retries": 3
+			},
+			"ports": [
+				{
+					"name": "udp-p2p",
+					"port": 9000,
+					"Protocol": "udp",
+					"HostPort": 0
+				},
+				{
+					"name": "p2p",
+					"port": 9000,
+					"Protocol": "tcp",
+					"HostPort": 0
+				},
+				{
+					"name": "quic-p2p",
+					"port": 9100,
+					"Protocol": "tcp",
+					"HostPort": 0
+				},
+				{
+					"name": "http",
+					"port": 3500,
+					"Protocol": "tcp",
+					"HostPort": 0
+				}
+			],
+			"node_refs": [
+				{
+					"service": "el",
+					"port_label": "authrpc",
+					"protocol": "http",
+					"user": ""
+				},
+				{
+					"service": "mev-boost",
+					"port_label": "http",
+					"protocol": "http",
+					"user": ""
+				}
+			],
+			"files_mapped": {
+				"/data/jwtsecret": "jwtsecret",
+				"/data/testnet-dir": "testnet"
+			},
+			"volumes_mapped": {
+				"/data_beacon": "data"
+			},
+			"component_name": "lighthouse-beacon-node",
+			"tag": "v7.0.0-beta.0",
+			"image": "sigp/lighthouse",
+			"entrypoint": "lighthouse"
+		},
+		{
+			"name": "validator",
+			"args": [
+				"vc",
+				"--datadir",
+				"/data/validator",
+				"--testnet-dir",
+				"/data/testnet-dir",
+				"--init-slashing-protection",
+				"--beacon-nodes",
+				"http://localhost:3500",
+				"--suggested-fee-recipient",
+				"0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990",
+				"--builder-proposals",
+				"--prefer-builder-proposals"
+			],
+			"node_refs": [
+				{
+					"service": "beacon",
+					"port_label": "http",
+					"protocol": "http",
+					"user": ""
+				}
+			],
+			"files_mapped": {
+				"/data/testnet-dir": "testnet",
+				"/data/validator": "data_validator"
+			},
+			"component_name": "lighthouse-validator",
+			"tag": "v7.0.0-beta.0",
+			"image": "sigp/lighthouse",
+			"entrypoint": "lighthouse"
+		},
+		{
+			"name": "mev-boost",
+			"args": [
+				"--api-listen-addr",
+				"0.0.0.0",
+				"--api-listen-port",
+				"5555",
+				"--beacon-client-addr",
+				"http://localhost:3500",
+				"--validation-server-addr",
+				"http://localhost:8545"
+			],
+			"env": {
+				"ALLOW_SYNCING_BEACON_NODE": "1"
+			},
+			"depends_on": [
+				{
+					"Name": "beacon",
+					"Condition": "service_healthy"
+				}
+			],
+			"ports": [
+				{
+					"name": "http",
+					"port": 5555,
+					"Protocol": "tcp",
+					"HostPort": 0
+				}
+			],
+			"node_refs": [
+				{
+					"service": "beacon",
+					"port_label": "http",
+					"protocol": "http",
+					"user": ""
+				},
+				{
+					"service": "el",
+					"port_label": "http",
+					"protocol": "http",
+					"user": ""
+				}
+			],
+			"component_name": "mev-boost-relay",
+			"tag": "latest",
+			"image": "docker.io/flashbots/playground-utils",
+			"entrypoint": "mev-boost-relay"
+		}
+	]
+}

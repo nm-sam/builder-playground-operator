@@ -1,0 +1,219 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.2
+  name: builderplaygrounddeployments.builderplayground.flashbots.io
+spec:
+  group: builderplayground.flashbots.io
+  names:
+    kind: BuilderPlaygroundDeployment
+    listKind: BuilderPlaygroundDeploymentList
+    plural: builderplaygrounddeployments
+    singular: builderplaygrounddeployment
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: BuilderPlaygroundDeployment is the Schema for the builderplaygrounddeployments
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BuilderPlaygroundDeploymentSpec defines the desired state
+              of the deployment
+            properties:
+              network:
+                description: Network defines networking configuration (optional)
+                properties:
+                  name:
+                    description: Name is the name of the network
+                    type: string
+                required:
+                - name
+                type: object
+              recipe:
+                description: Recipe is the builder-playground recipe used (l1, opstack,
+                  etc)
+                type: string
+              services:
+                description: Services is the list of services in this deployment
+                items:
+                  description: BuilderPlaygroundService represents a single service
+                    in the deployment
+                  properties:
+                    args:
+                      description: Args are the container command arguments
+                      items:
+                        type: string
+                      type: array
+                    dependencies:
+                      description: Dependencies defines services this service depends
+                        on
+                      items:
+                        description: BuilderPlaygroundDependency represents a service
+                          dependency
+                        properties:
+                          condition:
+                            description: Condition is either "running" or "healthy"
+                            type: string
+                          name:
+                            description: Name is the name of the dependent service
+                            type: string
+                        required:
+                        - condition
+                        - name
+                        type: object
+                      type: array
+                    entrypoint:
+                      description: Entrypoint overrides the container entrypoint
+                      type: string
+                    env:
+                      additionalProperties:
+                        type: string
+                      description: Env defines environment variables
+                      type: object
+                    image:
+                      description: Image is the container image
+                      type: string
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: Labels are the service labels
+                      type: object
+                    name:
+                      description: Name is the service name
+                      type: string
+                    ports:
+                      description: Ports are the container ports to expose
+                      items:
+                        description: BuilderPlaygroundPort represents a port configuration
+                        properties:
+                          hostPort:
+                            description: HostPort is the port to expose on the host
+                              (if applicable)
+                            type: integer
+                          name:
+                            description: Name is a unique identifier for this port
+                            type: string
+                          port:
+                            description: Port is the container port number
+                            type: integer
+                          protocol:
+                            description: Protocol is either "tcp" or "udp"
+                            type: string
+                        required:
+                        - name
+                        - port
+                        type: object
+                      type: array
+                    readyCheck:
+                      description: ReadyCheck defines how to determine service readiness
+                      properties:
+                        interval:
+                          description: Interval is the time between checks
+                          type: string
+                        queryURL:
+                          description: QueryURL is the URL to query for readiness
+                          type: string
+                        retries:
+                          description: Retries is the number of retry attempts
+                          type: integer
+                        startPeriod:
+                          description: StartPeriod is the initial delay before checks
+                            begin
+                          type: string
+                        test:
+                          description: Test is the command to run for readiness check
+                          items:
+                            type: string
+                          type: array
+                        timeout:
+                          description: Timeout is the maximum time for a check
+                          type: string
+                      type: object
+                    tag:
+                      description: Tag is the container image tag
+                      type: string
+                    useHostExecution:
+                      description: UseHostExecution indicates whether to run on host
+                        instead of in container
+                      type: boolean
+                    volumes:
+                      description: Volumes are the volume mounts for the service
+                      items:
+                        description: BuilderPlaygroundVolume represents a volume mount
+                        properties:
+                          mountPath:
+                            description: MountPath is the path in the container
+                            type: string
+                          name:
+                            description: Name is the volume name
+                            type: string
+                          subPath:
+                            description: SubPath is the path within the volume (optional)
+                            type: string
+                        required:
+                        - mountPath
+                        - name
+                        type: object
+                      type: array
+                  required:
+                  - image
+                  - name
+                  - tag
+                  type: object
+                type: array
+              storage:
+                description: Storage defines how persistent data should be stored
+                properties:
+                  path:
+                    description: Path is the host path for local-path storage (used
+                      when type is "local-path")
+                    type: string
+                  size:
+                    description: Size is the storage size (used when type is "pvc")
+                    type: string
+                  storageClass:
+                    description: StorageClass is the K8s storage class (used when
+                      type is "pvc")
+                    type: string
+                  type:
+                    description: Type is the storage type, either "local-path" or
+                      "pvc"
+                    type: string
+                required:
+                - type
+                type: object
+            required:
+            - recipe
+            - services
+            - storage
+            type: object
+          status:
+            description: BuilderPlaygroundDeploymentStatus defines the observed state
+              of BuilderPlaygroundDeployment.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

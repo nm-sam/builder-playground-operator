@@ -1,0 +1,45 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - builderplayground.flashbots.io
+  resources:
+  - builderplaygrounddeployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - builderplayground.flashbots.io
+  resources:
+  - builderplaygrounddeployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - builderplayground.flashbots.io
+  resources:
+  - builderplaygrounddeployments/status
+  verbs:
+  - get
+  - patch
+  - update
