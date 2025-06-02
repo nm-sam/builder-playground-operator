@@ -1,52 +1,49 @@
 apiVersion: builderplayground.flashbots.io/v1alpha1
 kind: BuilderPlaygroundDeployment
 metadata:
-  name: builder-playground-l1
+  creationTimestamp: null
+  name: builder-playground-sts
+  namespace: dev-test
 spec:
-  recipe: l1
-  storage:
-    type: local-path
-    path: /data/builder-playground
+  recipe: ""
   services:
-  - name: el
-    image: ghcr.io/paradigmxyz/reth
-    tag: v1.3.1
-    entrypoint:
-    - /usr/local/bin/reth
-    args:
+  - args:
     - node
     - --chain
-    - '{{.Dir}}/genesis.json'
+    - /artifacts/genesis.json
     - --datadir
-    - '{{.Dir}}/data_reth'
+    - /artifacts/data_reth
     - --color
     - never
     - --ipcpath
-    - '{{.Dir}}/reth.ipc'
+    - /artifacts/data_reth/reth.ipc
     - --addr
     - 127.0.0.1
     - --port
-    - '{{Port "rpc" 30303}}'
+    - "30303"
     - --http
     - --http.addr
     - 0.0.0.0
     - --http.api
     - admin,eth,web3,net,rpc,mev,flashbots
     - --http.port
-    - '{{Port "http" 8545}}'
+    - "8545"
     - --authrpc.port
-    - '{{Port "authrpc" 8551}}'
+    - "8551"
     - --authrpc.addr
     - 0.0.0.0
     - --authrpc.jwtsecret
-    - '{{.Dir}}/jwtsecret'
+    - /artifacts/jwtsecret
     - --metrics
-    - 0.0.0.0:{{Port "metrics" 9090}}
+    - 0.0.0.0:9090
     - --engine.persistence-threshold
     - "0"
     - --engine.memory-block-buffer-target
     - "0"
     - -vvvv
+    entrypoint: /usr/local/bin/reth
+    image: ghcr.io/paradigmxyz/reth
+    name: el
     ports:
     - name: rpc
       port: 30303
@@ -60,38 +57,34 @@ spec:
     - name: metrics
       port: 9090
       protocol: tcp
+    tag: v1.3.1
     volumes:
-    - name: artifacts
-      mountPath: /artifacts
-  - name: beacon
-    image: sigp/lighthouse
-    tag: v7.0.0-beta.0
-    entrypoint:
-    - lighthouse
-    args:
+    - mountPath: /artifacts
+      name: artifacts
+  - args:
     - bn
     - --datadir
-    - '{{.Dir}}/data_beacon_node'
+    - /artifacts/data_beacon
     - --testnet-dir
-    - '{{.Dir}}/testnet'
+    - /artifacts/testnet
     - --enable-private-discovery
     - --disable-peer-scoring
     - --staking
     - --enr-address
     - 127.0.0.1
     - --enr-udp-port
-    - '{{PortUDP "p2p-udp" 9000}}'
+    - "9000"
     - --enr-tcp-port
-    - '{{Port "p2p" 9000}}'
+    - "9000"
     - --enr-quic-port
-    - '{{Port "quic-p2p" 9100}}'
+    - "9100"
     - --port
-    - '{{Port "p2p" 9000}}'
+    - "9000"
     - --quic-port
-    - '{{Port "quic-p2p" 9100}}'
+    - "9100"
     - --http
     - --http-port
-    - '{{Port "http" 3500}}'
+    - "3500"
     - --http-address
     - 0.0.0.0
     - --http-allow-origin
@@ -100,21 +93,24 @@ spec:
     - --target-peers
     - "0"
     - --execution-endpoint
-    - '{{Service "el" "authrpc" "http"}}'
+    - http://localhost:8551
     - --execution-jwt
-    - '{{.Dir}}/jwtsecret'
+    - /artifacts/jwtsecret
     - --always-prepare-payload
     - --prepare-payload-lookahead
     - "8000"
     - --suggested-fee-recipient
     - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
     - --builder
-    - '{{Service "mev-boost" "http" "http"}}'
+    - http://localhost:5555
     - --builder-fallback-epochs-since-finalization
     - "0"
     - --builder-fallback-disable-checks
+    entrypoint: lighthouse
+    image: sigp/lighthouse
+    name: beacon
     ports:
-    - name: p2p-udp
+    - name: udp-p2p
       port: 9000
       protocol: udp
     - name: p2p
@@ -126,59 +122,53 @@ spec:
     - name: http
       port: 3500
       protocol: tcp
-    readyCheck:
-      queryURL: http://localhost:3500/eth/v1/node/syncing
-      interval: 1s
-      timeout: 30s
-      retries: 3
-      startPeriod: 1s
-    volumes:
-    - name: artifacts
-      mountPath: /artifacts
-  - name: validator
-    image: sigp/lighthouse
     tag: v7.0.0-beta.0
-    entrypoint:
-    - lighthouse
-    args:
+    volumes:
+    - mountPath: /artifacts
+      name: artifacts
+  - args:
     - vc
     - --datadir
-    - '{{.Dir}}/data_validator'
+    - /artifacts/data_validator
     - --testnet-dir
-    - '{{.Dir}}/testnet'
+    - /artifacts/testnet
     - --init-slashing-protection
     - --beacon-nodes
-    - '{{Service "beacon" "http" "http"}}'
+    - http://localhost:3500
     - --suggested-fee-recipient
     - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
     - --builder-proposals
     - --prefer-builder-proposals
+    entrypoint: lighthouse
+    image: sigp/lighthouse
+    name: validator
+    tag: v7.0.0-beta.0
     volumes:
-    - name: artifacts
-      mountPath: /artifacts
-  - name: mev-boost
-    image: docker.io/flashbots/playground-utils
-    tag: latest
-    entrypoint:
-    - mev-boost-relay
-    args:
+    - mountPath: /artifacts
+      name: artifacts
+  - args:
     - --api-listen-addr
     - 0.0.0.0
     - --api-listen-port
-    - '{{Port "http" 5555}}'
+    - "5555"
     - --beacon-client-addr
-    - '{{Service "beacon" "http" "http"}}'
+    - http://localhost:3500
     - --validation-server-addr
-    - '{{Service "el" "http" "http"}}'
+    - http://localhost:8545
+    entrypoint: mev-boost-relay
     env:
       ALLOW_SYNCING_BEACON_NODE: "1"
+    image: docker.io/flashbots/playground-utils
+    name: mev-boost
     ports:
     - name: http
       port: 5555
       protocol: tcp
-    dependencies:
-    - name: beacon
-      condition: healthy
+    tag: latest
     volumes:
-    - name: artifacts
-      mountPath: /artifacts
+    - mountPath: /artifacts
+      name: artifacts
+  storage:
+    path: /home/ubuntu/my-builder-testnet-02
+    type: local-path
+status: {}

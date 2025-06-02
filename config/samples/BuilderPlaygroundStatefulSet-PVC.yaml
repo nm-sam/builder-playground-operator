@@ -1,66 +1,51 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  creationTimestamp: "2025-05-20T07:23:12Z"
-  generation: 1
-  name: builder-playground-l1
+  creationTimestamp: null
+  name: builder-playground-sts
   namespace: dev-test
-  ownerReferences:
-  - apiVersion: builderplayground.flashbots.io/v1alpha1
-    blockOwnerDeletion: true
-    controller: true
-    kind: BuilderPlaygroundDeployment
-    name: builder-playground-l1
-    uid: d266dc1f-f063-4b5a-a636-caaf866fdc65
-  resourceVersion: "8370547"
-  uid: 7a2e4a35-c692-4a05-b87d-39f3209c5196
 spec:
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: Retain
-    whenScaled: Retain
-  podManagementPolicy: OrderedReady
   replicas: 1
-  revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: builder-playground-l1
-  serviceName: builder-playground-l1
+      app: builder-playground-sts
+  serviceName: builder-playground-sts
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: builder-playground-l1
+        app: builder-playground-sts
     spec:
       containers:
       - args:
         - node
         - --chain
-        - '{{.Dir}}/genesis.json'
+        - /artifacts/genesis.json
         - --datadir
-        - '{{.Dir}}/data_reth'
+        - /artifacts/data_reth
         - --color
         - never
         - --ipcpath
-        - '{{.Dir}}/reth.ipc'
+        - /artifacts/data_reth/reth.ipc
         - --addr
         - 127.0.0.1
         - --port
-        - '{{Port "rpc" 30303}}'
+        - "30303"
         - --http
         - --http.addr
         - 0.0.0.0
         - --http.api
         - admin,eth,web3,net,rpc,mev,flashbots
         - --http.port
-        - '{{Port "http" 8545}}'
+        - "8545"
         - --authrpc.port
-        - '{{Port "authrpc" 8551}}'
+        - "8551"
         - --authrpc.addr
         - 0.0.0.0
         - --authrpc.jwtsecret
-        - '{{.Dir}}/jwtsecret'
+        - /artifacts/jwtsecret
         - --metrics
-        - 0.0.0.0:{{Port "metrics" 9090}}
+        - 0.0.0.0:9090
         - --engine.persistence-threshold
         - "0"
         - --engine.memory-block-buffer-target
@@ -69,7 +54,6 @@ spec:
         command:
         - /usr/local/bin/reth
         image: ghcr.io/paradigmxyz/reth:v1.3.1
-        imagePullPolicy: IfNotPresent
         name: el
         ports:
         - containerPort: 30303
@@ -85,35 +69,33 @@ spec:
           name: metrics
           protocol: TCP
         resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
         volumeMounts:
         - mountPath: /artifacts
           name: artifacts
       - args:
         - bn
         - --datadir
-        - '{{.Dir}}/data_beacon_node'
+        - /artifacts/data_beacon
         - --testnet-dir
-        - '{{.Dir}}/testnet'
+        - /artifacts/testnet
         - --enable-private-discovery
         - --disable-peer-scoring
         - --staking
         - --enr-address
         - 127.0.0.1
         - --enr-udp-port
-        - '{{PortUDP "p2p-udp" 9000}}'
+        - "9000"
         - --enr-tcp-port
-        - '{{Port "p2p" 9000}}'
+        - "9000"
         - --enr-quic-port
-        - '{{Port "quic-p2p" 9100}}'
+        - "9100"
         - --port
-        - '{{Port "p2p" 9000}}'
+        - "9000"
         - --quic-port
-        - '{{Port "quic-p2p" 9100}}'
+        - "9100"
         - --http
         - --http-port
-        - '{{Port "http" 3500}}'
+        - "3500"
         - --http-address
         - 0.0.0.0
         - --http-allow-origin
@@ -122,27 +104,26 @@ spec:
         - --target-peers
         - "0"
         - --execution-endpoint
-        - '{{Service "el" "authrpc" "http"}}'
+        - http://localhost:8551
         - --execution-jwt
-        - '{{.Dir}}/jwtsecret'
+        - /artifacts/jwtsecret
         - --always-prepare-payload
         - --prepare-payload-lookahead
         - "8000"
         - --suggested-fee-recipient
         - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
         - --builder
-        - '{{Service "mev-boost" "http" "http"}}'
+        - http://localhost:5555
         - --builder-fallback-epochs-since-finalization
         - "0"
         - --builder-fallback-disable-checks
         command:
         - lighthouse
         image: sigp/lighthouse:v7.0.0-beta.0
-        imagePullPolicy: IfNotPresent
         name: beacon
         ports:
         - containerPort: 9000
-          name: p2p-udp
+          name: udp-p2p
           protocol: UDP
         - containerPort: 9000
           name: p2p
@@ -154,20 +135,18 @@ spec:
           name: http
           protocol: TCP
         resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
         volumeMounts:
         - mountPath: /artifacts
           name: artifacts
       - args:
         - vc
         - --datadir
-        - '{{.Dir}}/data_validator'
+        - /artifacts/data_validator
         - --testnet-dir
-        - '{{.Dir}}/testnet'
+        - /artifacts/testnet
         - --init-slashing-protection
         - --beacon-nodes
-        - '{{Service "beacon" "http" "http"}}'
+        - http://localhost:3500
         - --suggested-fee-recipient
         - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
         - --builder-proposals
@@ -175,11 +154,8 @@ spec:
         command:
         - lighthouse
         image: sigp/lighthouse:v7.0.0-beta.0
-        imagePullPolicy: IfNotPresent
         name: validator
         resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
         volumeMounts:
         - mountPath: /artifacts
           name: artifacts
@@ -187,54 +163,79 @@ spec:
         - --api-listen-addr
         - 0.0.0.0
         - --api-listen-port
-        - '{{Port "http" 5555}}'
+        - "5555"
         - --beacon-client-addr
-        - '{{Service "beacon" "http" "http"}}'
+        - http://localhost:3500
         - --validation-server-addr
-        - '{{Service "el" "http" "http"}}'
+        - http://localhost:8545
         command:
         - mev-boost-relay
         env:
         - name: ALLOW_SYNCING_BEACON_NODE
           value: "1"
         image: docker.io/flashbots/playground-utils:latest
-        imagePullPolicy: Always
         name: mev-boost
         ports:
         - containerPort: 5555
           name: http
           protocol: TCP
         resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
         volumeMounts:
         - mountPath: /artifacts
           name: artifacts
-      dnsPolicy: ClusterFirst
+      # initContainers:
+      # - command:
+      #   - sh
+      #   - -c
+      #   - test -d /artifacts
+      #   image: busybox:1.37
+      #   name: check-artifacts-dir
+      #   resources: {}
+      #   volumeMounts:
+      #   - mountPath: /artifacts
+      #     name: artifacts
+
       initContainers:
-      - command:
-        - sh
-        - -c
-        - test -d /artifacts
-        image: busybox:1.37
-        imagePullPolicy: IfNotPresent
-        name: check-artifacts-dir
-        resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        volumeMounts:
-        - mountPath: /artifacts
-          name: artifacts
-      restartPolicy: Always
-      schedulerName: default-scheduler
-      securityContext: {}
-      terminationGracePeriodSeconds: 30
-      volumes:
-      - hostPath:
-          path: /home/ubuntu/my-builder-testnet-2
-          type: Directory
-        name: artifacts
-  updateStrategy:
-    rollingUpdate:
-      partition: 0
-    type: RollingUpdate
+        - name: prepare-artifacts
+          image: golang:1.22
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -d /artifacts ] || [ -z "$(ls -A /artifacts)" ]; then
+                echo "Preparing /artifacts directory..."
+                git clone https://github.com/flashbots/builder-playground.git
+                cd builder-playground
+                go clean -cache -modcache
+                go mod tidy
+                go build -o builder-playground .
+                ./builder-playground cook l1 \
+                  --latest-fork \
+                  --use-reth-for-validation \
+                  --output /artifacts \
+                  --genesis-delay 15 \
+                  --log-level debug \
+                  --dry-run
+              else
+                echo "/artifacts already exists and is not empty. Skipping preparation."
+              fi
+          volumeMounts:
+            - mountPath: /artifacts
+              name: artifacts
+
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: artifacts
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 20Gi
+      storageClassName: longhorn
+
+  updateStrategy: {}
+status:
+  availableReplicas: 0
+  replicas: 0

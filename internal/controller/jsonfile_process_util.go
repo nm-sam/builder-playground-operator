@@ -35,6 +35,7 @@ func ProcessFile(filepath string, outputPath string) {
 
 	servicesData := raw["services"].([]any)
 	mountPath := "/artifacts"
+	portRegexp := regexp.MustCompile(`{{\s*(Port|PortUDP)\s+"[^"]+"\s+(\d+)\s*}}`)
 	for i, s := range servicesData {
 		serviceMap := s.(map[string]any)
 		args := toStringSlice(serviceMap["args"])
@@ -46,6 +47,11 @@ func ProcessFile(filepath string, outputPath string) {
 			if newVal, found := filesMapped[arg]; found {
 				args[j] = mountPath + "/" + newVal
 			}
+		}
+
+		// Replace {{Port "..." 12345}} and {{PortUDP "..." 12345}} with "12345"
+		for k, argK := range args {
+			args[k] = portRegexp.ReplaceAllString(argK, "$2")
 		}
 
 		for key := range volumesMapped {

@@ -71,6 +71,12 @@
         }
       ],
       "tag": "v1.3.1",
+      "volumes": [
+        {
+          "mountPath": "/artifacts",
+          "name": "artifacts"
+        }
+      ],
       "volumes_mapped": {
         "/data_reth": "data"
       }
@@ -148,7 +154,7 @@
         {
           "HostPort": 0,
           "Protocol": "udp",
-          "name": "p2p",
+          "name": "udp-p2p",
           "port": 9000
         },
         {
@@ -179,6 +185,12 @@
         "timeout": 30000000000
       },
       "tag": "v7.0.0-beta.0",
+      "volumes": [
+        {
+          "mountPath": "/artifacts",
+          "name": "artifacts"
+        }
+      ],
       "volumes_mapped": {
         "/data_beacon": "data"
       }
@@ -214,7 +226,13 @@
           "user": ""
         }
       ],
-      "tag": "v7.0.0-beta.0"
+      "tag": "v7.0.0-beta.0",
+      "volumes": [
+        {
+          "mountPath": "/artifacts",
+          "name": "artifacts"
+        }
+      ]
     },
     {
       "args": [
@@ -262,7 +280,13 @@
           "port": 5555
         }
       ],
-      "tag": "latest"
+      "tag": "latest",
+      "volumes": [
+        {
+          "mountPath": "/artifacts",
+          "name": "artifacts"
+        }
+      ]
     }
   ]
 }

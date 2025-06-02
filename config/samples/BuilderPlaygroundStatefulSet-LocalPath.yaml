@@ -1,0 +1,205 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  creationTimestamp: null
+  name: builder-playground-sts
+  namespace: dev-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: builder-playground-sts
+  serviceName: builder-playground-sts
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: builder-playground-sts
+    spec:
+      containers:
+      - args:
+        - node
+        - --chain
+        - /artifacts/genesis.json
+        - --datadir
+        - /artifacts/data_reth
+        - --color
+        - never
+        - --ipcpath
+        - /artifacts/data_reth/reth.ipc
+        - --addr
+        - 127.0.0.1
+        - --port
+        - "30303"
+        - --http
+        - --http.addr
+        - 0.0.0.0
+        - --http.api
+        - admin,eth,web3,net,rpc,mev,flashbots
+        - --http.port
+        - "8545"
+        - --authrpc.port
+        - "8551"
+        - --authrpc.addr
+        - 0.0.0.0
+        - --authrpc.jwtsecret
+        - /artifacts/jwtsecret
+        - --metrics
+        - 0.0.0.0:9090
+        - --engine.persistence-threshold
+        - "0"
+        - --engine.memory-block-buffer-target
+        - "0"
+        - -vvvv
+        command:
+        - /usr/local/bin/reth
+        image: ghcr.io/paradigmxyz/reth:v1.3.1
+        name: el
+        ports:
+        - containerPort: 30303
+          name: rpc
+          protocol: TCP
+        - containerPort: 8545
+          name: http
+          protocol: TCP
+        - containerPort: 8551
+          name: authrpc
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      - args:
+        - bn
+        - --datadir
+        - /artifacts/data_beacon
+        - --testnet-dir
+        - /artifacts/testnet
+        - --enable-private-discovery
+        - --disable-peer-scoring
+        - --staking
+        - --enr-address
+        - 127.0.0.1
+        - --enr-udp-port
+        - "9000"
+        - --enr-tcp-port
+        - "9000"
+        - --enr-quic-port
+        - "9100"
+        - --port
+        - "9000"
+        - --quic-port
+        - "9100"
+        - --http
+        - --http-port
+        - "3500"
+        - --http-address
+        - 0.0.0.0
+        - --http-allow-origin
+        - '*'
+        - --disable-packet-filter
+        - --target-peers
+        - "0"
+        - --execution-endpoint
+        - http://localhost:8551
+        - --execution-jwt
+        - /artifacts/jwtsecret
+        - --always-prepare-payload
+        - --prepare-payload-lookahead
+        - "8000"
+        - --suggested-fee-recipient
+        - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
+        - --builder
+        - http://localhost:5555
+        - --builder-fallback-epochs-since-finalization
+        - "0"
+        - --builder-fallback-disable-checks
+        command:
+        - lighthouse
+        image: sigp/lighthouse:v7.0.0-beta.0
+        name: beacon
+        ports:
+        - containerPort: 9000
+          name: udp-p2p
+          protocol: UDP
+        - containerPort: 9000
+          name: p2p
+          protocol: TCP
+        - containerPort: 9100
+          name: quic-p2p
+          protocol: TCP
+        - containerPort: 3500
+          name: http
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      - args:
+        - vc
+        - --datadir
+        - /artifacts/data_validator
+        - --testnet-dir
+        - /artifacts/testnet
+        - --init-slashing-protection
+        - --beacon-nodes
+        - http://localhost:3500
+        - --suggested-fee-recipient
+        - 0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990
+        - --builder-proposals
+        - --prefer-builder-proposals
+        command:
+        - lighthouse
+        image: sigp/lighthouse:v7.0.0-beta.0
+        name: validator
+        resources: {}
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      - args:
+        - --api-listen-addr
+        - 0.0.0.0
+        - --api-listen-port
+        - "5555"
+        - --beacon-client-addr
+        - http://localhost:3500
+        - --validation-server-addr
+        - http://localhost:8545
+        command:
+        - mev-boost-relay
+        env:
+        - name: ALLOW_SYNCING_BEACON_NODE
+          value: "1"
+        image: docker.io/flashbots/playground-utils:latest
+        name: mev-boost
+        ports:
+        - containerPort: 5555
+          name: http
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - test -d /artifacts
+        image: busybox:1.37
+        name: check-artifacts-dir
+        resources: {}
+        volumeMounts:
+        - mountPath: /artifacts
+          name: artifacts
+      volumes:
+      - hostPath:
+          path: /home/ubuntu/my-builder-testnet-02
+          type: Directory
+        name: artifacts
+  updateStrategy: {}
+status:
+  availableReplicas: 0
+  replicas: 0
