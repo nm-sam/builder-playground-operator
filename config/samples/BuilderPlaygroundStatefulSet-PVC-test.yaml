@@ -14,54 +14,22 @@ spec:
       labels:
         app: builder-playground-sts
     spec:
-      # initContainers:
-      #   - name: prepare-artifacts
-      #     image: golang:1.22
-      #     command:
-      #       - sh
-      #       - -c
-      #       - |
-      #         if [ ! -d /artifacts ] || [ -z "$(ls -A /artifacts)" ]; then
-      #           echo "Preparing /artifacts directory..."
-      #           git clone https://github.com/flashbots/builder-playground.git
-      #           cd builder-playground
-      #           go clean -cache -modcache
-      #           go mod tidy
-      #           go build -o builder-playground .
-      #           ./builder-playground cook l1 \
-      #             --latest-fork \
-      #             --use-reth-for-validation \
-      #             --output /artifacts \
-      #             --genesis-delay 15 \
-      #             --log-level debug \
-      #             --dry-run
-      #         else
-      #           echo "/artifacts already exists and is not empty. Skipping preparation."
-      #         fi
-      #     volumeMounts:
-      #       - mountPath: /artifacts
-      #         name: artifacts
-
-      containers:
-        # - name: debug-artifacts
-        #   image: busybox
-        #   command: ["sh", "-c", "sleep infinity"]
-        #   volumeMounts:
-        #     - mountPath: /artifacts
-        #       name: artifacts
+      initContainers:
         - name: prepare-artifacts
           image: golang:1.24
           command:
             - sh
             - -c
             - |
-              if [ "$(find /artifacts -mindepth 1 ! -name 'lost+found' -print -quit 2>/dev/null)" = "" ]; then
+              if [ "$(find /artifacts/output -mindepth 1 ! -name 'lost+found' -print -quit 2>/dev/null)" = "" ]; then
                 echo "Preparing /artifacts directory..."
+                cd src
                 git clone https://github.com/flashbots/builder-playground.git
                 cd builder-playground
                 go clean -cache -modcache
                 go mod tidy
                 go build -o builder-playground .
+                echo "we got binary builder-playground...................."
                 ./builder-playground cook l1 \
                   --latest-fork \
                   --use-reth-for-validation \
@@ -69,11 +37,56 @@ spec:
                   --genesis-delay 15 \
                   --log-level debug \
                   --dry-run
+                echo "after command builder-playground.......move files............."
+                mv /artifacts/output/* /artifacts/output/.* /artifacts/ 2>/dev/null
+                echo "Data has been generated" > /artifacts/output/data-generated.txt
+                echo "complete command builder-playground...................."
               else
-                echo "/artifacts already exists and is not empty. Skipping preparation."
+                echo "/artifacts/output already exists and is not empty. Skipping preparation."
               fi
 
-              sleep infinity
+          volumeMounts:
+            - mountPath: /artifacts
+              name: artifacts
+
+      containers:
+        - name: debug-artifacts
+          image: busybox
+          command: ["sh", "-c", "sleep infinity"]
+          volumeMounts:
+            - mountPath: /artifacts
+              name: artifacts
+        # - name: prepare-artifacts
+        #   image: golang:1.24
+        #   command:
+        #     - sh
+        #     - -c
+        #     - |
+        #       if [ "$(find /artifacts/output -mindepth 1 ! -name 'lost+found' -print -quit 2>/dev/null)" = "" ]; then
+        #         echo "Preparing /artifacts directory..."
+        #         cd src
+        #         git clone https://github.com/flashbots/builder-playground.git
+        #         cd builder-playground
+        #         go clean -cache -modcache
+        #         go mod tidy
+        #         go build -o builder-playground .
+        #         echo "we got binary builder-playground...................."
+        #         ./builder-playground cook l1 \
+        #           --latest-fork \
+        #           --use-reth-for-validation \
+        #           --output /artifacts/output \
+        #           --genesis-delay 15 \
+        #           --log-level debug \
+        #           --dry-run
+        #         echo "after command builder-playground.......move files............."
+        #         mv /artifacts/output/* /artifacts/output/.* /artifacts/ 2>/dev/null
+        #         echo "Data has been generated" > /artifacts/output/data-generated.txt
+        #         echo "complete command builder-playground...................."
+        #       else
+        #         echo "/artifacts/output already exists and is not empty. Skipping preparation."
+        #       fi
+
+        #       sleep infinity
           volumeMounts:
             - mountPath: /artifacts
               name: artifacts
