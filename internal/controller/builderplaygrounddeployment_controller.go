@@ -259,7 +259,9 @@ func (r *BuilderPlaygroundDeploymentReconciler) SetupWithManager(mgr ctrl.Manage
 
 // Generate CR file and StatefulSet YAML files 
 func GenerateCRAndStatefulSet(manifestPath, outputDir string, builderConfigDir string) error {	
-	ProcessFile(manifestPath, outputDir)
+	ProcessFileForArgs(manifestPath, outputDir)
+	ProcessFileForPorts(outputDir, outputDir)
+	ProcessFileForURL(outputDir, outputDir)
 
 	fmt.Printf("✅ Reading manifest from: %s\n", manifestPath)
 	fmt.Printf("✅ Generating Kubernetes manifests into: %s\n", outputDir)

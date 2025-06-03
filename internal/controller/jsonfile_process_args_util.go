@@ -9,19 +9,7 @@ import (
 	"regexp"
 )
 
-type Service struct {
-	Name           string            `json:"name"`
-	Args           []string          `json:"args"`
-	FilesMapped    map[string]string `json:"files_mapped"`
-	VolumesMapped  map[string]string `json:"volumes_mapped"`	
-	OtherContent   map[string]any    `json:"-"` // catch-all for other keys
-}
-
-type Input struct {
-	Services []Service `json:"services"`
-}
-
-func ProcessFile(filepath string, outputPath string) {
+func ProcessFileForArgs(filepath string, outputPath string) {
 	// Load the original JSON
 	inputBytes, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -55,6 +43,7 @@ func ProcessFile(filepath string, outputPath string) {
 			args[k] = portRegexp.ReplaceAllString(argK, "$2")
 		}
 
+		// Volume Transfer
 		for key := range volumesMapped {
 			for j, arg := range args {
 				if strings.HasPrefix(arg, key) {
