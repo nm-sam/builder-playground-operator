@@ -107,7 +107,7 @@ func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygrou
 	labels := map[string]string{"app": builderPlaygroundDeployment.Name}
 	containers := buildContainers(builderPlaygroundDeployment)
 
-  	fmt.Println("✅ start to geneate statefulset....")
+  	fmt.Println("✅ Start to geneate statefulset....")
 
 	var volumes []corev1.Volume
 	var volumeMounts []corev1.VolumeMount
@@ -199,7 +199,7 @@ func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygrou
 	// 	Command: []string{"sh", "-c", "test -d /artifacts"},
 	// 	VolumeMounts: volumeMounts,
 	// }}
-
+    fmt.Println("✅ End to geneate statefulset....")
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      builderPlaygroundDeployment.Name,
