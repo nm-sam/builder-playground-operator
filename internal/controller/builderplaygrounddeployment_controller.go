@@ -66,6 +66,7 @@ type BuilderPlaygroundDeploymentReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.4/pkg/reconcile
 func (r *BuilderPlaygroundDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
+	fmt.Println("✅ start Reconcile ....")
 
 	// var builderPlaygroundDeployment  builderplaygroundv1alpha1.BuilderPlaygroundDeployment
 	builderPlaygroundDeployment :=  &builderplaygroundv1alpha1.BuilderPlaygroundDeployment {}
