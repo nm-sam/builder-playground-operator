@@ -35,8 +35,6 @@ sudo ./builder-playground cook l1 \
   --genesis-delay 15 \
   --log-level debug \
   --dry-run
-
-# Generate the Manifests files (BuilderPlaygroundStatefulSet.yaml and CR) using builder-playground
 ```
 You can see all the necessary files and configurations are generated as below,
 ```
@@ -54,23 +52,23 @@ drwxr-xr-x  2 root   root      4096 May 22 03:04 scripts/
 drwxr-xr-x  2 root   root      4096 May 22 03:04 testnet/
 ```
 
-Then builder-playground-operator can use the file "manifest.json" to generate the StatefulSet and CR files,
-- `builder-config-dir` is the directory that the **builder-playground** uses to geneate the configurations
-- `k8s-manifests-dir` is the output directory that **builder-playground-operator** uses to geneate the manifests.
+Then builder-playground-operator will use the file **"manifest.json"** to generate the StatefulSet and CR files,
+- `builder-config-dir` in command below is the directory that the **builder-playground** used above to geneate the configurations. Here it is used as the input of builder-playground-operator CLI.
+- `k8s-manifests-dir` in command below is the output directory that **builder-playground-operator** uses to geneate the manifests.
 ```
-# Compile the Go source code in the current directory into a binary named "builder-playground-operator"
+# Compile the Go source code in the current directory into a binary named **"builder-playground-operator"**
 go build -o builder-playground-operator .
 
 # Run the compiled "builder-playground-operator" binary with CLI mode and specify paths for configuration and Kubernetes manifests
-./builder-playground-operator --cli \                             # Run in CLI mode
-  --manifest ./manifest.json \                                   # Use the specified manifest file for deployment instructions
+./builder-playground-operator --cli \                            # Run in CLI mode
+  --manifest /home/ubuntu/my-builder-testnet-01/manifest.json \  # Use the specified manifest file for deployment instructions
   --builder-config-dir /home/ubuntu/my-builder-testnet-01 \      # Directory containing builder-specific configuration files
   --k8s-manifests-dir /home/ubuntu/my-builder-operator-01        # Directory containing Kubernetes manifest templates to apply
 ```
 
 There will be 3 files geneated. 
 - You can use "BuilderPlaygroundStatefulSet.yaml" to deploy builder playground to your local cluster.
-- The StatefulSet use the folder **"builder-config-dir"** to retrieve all the configurations and write DB
+- The StatefulSet use the folder **"builder-config-dir"** to retrieve all the configurations and write Data
 ```
 $ cd my-builder-operator-01
 $ ll
@@ -80,11 +78,13 @@ $ ll
 -rw-r--r--  1 ubuntu ubuntu 6744 May 22 03:11 processed.json
 
 ```
+Once you get file "BuilderPlaygroundStatefulSet.yaml", you can deploy Builder Playground on Kubernetes manually.
 
+### To Deploy Builder Playground on Kubernes using a real Kubernetes Operator
+- Use existing BuilderPlaygroundOperator and CR to deploy Builder Playground on Kubernes (This part will be added soon)
+- Build and push your own BuilderPlaygroundOperator image to the location specified by `IMG`
 
-### To Deploy on the cluster as an Operator
-**Build and push your image to the location specified by `IMG`:**
-
+The part below shows show how to build and push your own BuilderPlaygroundOperator image and use it deploy Builder Playground on Kubernes
 ```sh
 # Build the Docker image using the Dockerfile and Makefile (typically builds and tags the image as 'controller:latest')
 sudo make docker-build
@@ -116,7 +116,9 @@ make install
 
 ```sh
 # Apply a custom resource (CR) definition to the cluster, which triggers the operator to reconcile and act
-kubectl apply -f /home/ubuntu/my-builder-operator-01/CR-BuilderPlaygroundDeployment.yaml
+kubectl apply -f /home/ubuntu/my-builder-operator-01/CR-BuilderPlaygroundDeployment-LocalPath.yaml
+or
+kubectl apply -f /home/ubuntu/my-builder-operator-01/CR-BuilderPlaygroundDeployment-PVC.yaml
 ```
 
 > **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
@@ -124,6 +126,9 @@ privileges or be logged in as admin.
 
 
 
+
+
+**The part below will be changed soon.**
 **Create instances of your solution**
 You can apply the samples (examples) from the config/sample:
 
