@@ -183,27 +183,17 @@ spec:
         volumeMounts:
         - mountPath: /artifacts
           name: artifacts
-      # initContainers:
-      # - command:
-      #   - sh
-      #   - -c
-      #   - test -d /artifacts
-      #   image: busybox:1.37
-      #   name: check-artifacts-dir
-      #   resources: {}
-      #   volumeMounts:
-      #   - mountPath: /artifacts
-      #     name: artifacts
 
       initContainers:
         - name: prepare-artifacts
-          image: golang:1.22
+          image: golang:1.24
           command:
             - sh
             - -c
             - |
-              if [ ! -d /artifacts ] || [ -z "$(ls -A /artifacts)" ]; then
+              if [ "$(find /artifacts/output -mindepth 1 ! -name 'lost+found' -print -quit 2>/dev/null)" = "" ]; then
                 echo "Preparing /artifacts directory..."
+                cd src
                 git clone https://github.com/flashbots/builder-playground.git
                 cd builder-playground
                 go clean -cache -modcache
@@ -212,13 +202,18 @@ spec:
                 ./builder-playground cook l1 \
                   --latest-fork \
                   --use-reth-for-validation \
-                  --output /artifacts \
+                  --output /artifacts/output \
                   --genesis-delay 15 \
                   --log-level debug \
                   --dry-run
+                echo "Configuration files generated."
+                mv /artifacts/output/* /artifacts/output/.* /artifacts/ 2>/dev/null
+                echo "Data has been generated" > /artifacts/output/data-generated.txt
+                echo "Init completed successfully"
               else
-                echo "/artifacts already exists and is not empty. Skipping preparation."
+                echo "/artifacts/output already exists and is not empty. Skipping preparation."
               fi
+
           volumeMounts:
             - mountPath: /artifacts
               name: artifacts

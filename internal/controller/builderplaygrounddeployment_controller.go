@@ -102,9 +102,101 @@ func (r *BuilderPlaygroundDeploymentReconciler) Reconcile(ctx context.Context, r
 // This function geneate the StatefulSet Structured used for Operator to manage the resources
 func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygroundv1alpha1.BuilderPlaygroundDeployment, scheme *runtime.Scheme) *appsv1.StatefulSet {
 	labels := map[string]string{"app": builderPlaygroundDeployment.Name}
-
 	containers := buildContainers(builderPlaygroundDeployment)
 
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
+	var initContainers []corev1.Container
+	var volumeClaimTemplates []corev1.PersistentVolumeClaim
+
+	volumeMounts = []corev1.VolumeMount{{
+		Name:      "artifacts",
+		MountPath: "/artifacts",
+	}}
+
+	if builderPlaygroundDeployment.Spec.Storage.Type == "pvc" {
+		// Use PVC
+		volumes = []corev1.Volume{{
+			Name: "artifacts",
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: "artifacts",
+				},
+			},
+		}}
+
+		volumeClaimTemplates = []corev1.PersistentVolumeClaim{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "artifacts",
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					corev1.ReadWriteOnce,
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse(builderPlaygroundDeployment.Spec.Storage.Size),
+					},
+				},
+				StorageClassName: &builderPlaygroundDeployment.Spec.Storage.StorageClass,
+			},
+		}}
+
+	} else {
+		// Default to local-path
+		volumes = []corev1.Volume{{
+			Name: "artifacts",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: builderPlaygroundDeployment.Spec.Storage.Path,
+					Type: hostPathTypePtr("Directory"),
+				},
+			},
+		}}
+	}
+
+	// Init container to check directory (applies in both cases)
+	initContainers = []corev1.Container{{
+    	Name:  "prepare-artifacts",
+    	Image: " golang:1.24",
+    	Command: []string{
+    		"sh", "-c",
+    		`if [ "$(find /artifacts/output -mindepth 1 ! -name 'lost+found' -print -quit 2>/dev/null)" = "" ]; then
+               echo "Preparing /artifacts directory..."
+               cd src
+               git clone https://github.com/flashbots/builder-playground.git
+               cd builder-playground
+               go clean -cache -modcache
+               go mod tidy
+               go build -o builder-playground .
+               ./builder-playground cook l1 \
+                 --latest-fork \
+                 --use-reth-for-validation \
+                 --output /artifacts/output \
+                 --genesis-delay 15 \
+                 --log-level debug \
+                 --dry-run
+               echo "Configuration files generated."
+               mv /artifacts/output/* /artifacts/output/.* /artifacts/ 2>/dev/null
+               echo "Data has been generated" > /artifacts/output/data-generated.txt
+               echo "Init completed successfully"
+            else
+               echo "/artifacts/output already exists and is not empty. Skipping preparation."
+            fi`,
+    	},
+		
+    	VolumeMounts: []corev1.VolumeMount{{
+    		Name:      "artifacts",
+    		MountPath: "/artifacts",
+    	}},
+    }})
+
+    // initContainers = []corev1.Container{{
+	// 	Name:    "check-artifacts-dir",
+	// 	Image:   "busybox:1.37",
+	// 	Command: []string{"sh", "-c", "test -d /artifacts"},
+	// 	VolumeMounts: volumeMounts,
+	// }}
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -122,30 +214,64 @@ func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygrou
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{{
-						Name: "artifacts",
-						VolumeSource: corev1.VolumeSource{
-							HostPath: &corev1.HostPathVolumeSource{
-								Path: builderPlaygroundDeployment.Spec.Storage.Path,
-								Type: hostPathTypePtr("Directory"),
-							},
-						},
-					}},
-					InitContainers: []corev1.Container{{
-						Name:    "check-artifacts-dir",
-						Image:   "busybox:1.37",
-						Command: []string{"sh", "-c", "test -d /artifacts"},
-						VolumeMounts: []corev1.VolumeMount{{
-							Name:      "artifacts",
-							MountPath: "/artifacts",
-						}},
-					}},					
-					Containers: containers,
+					Volumes:        volumes,
+					InitContainers: initContainers,
+					Containers:     containers,
 				},
 			},
+			VolumeClaimTemplates: volumeClaimTemplates,
 		},
 	}
 }
+
+
+
+// func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygroundv1alpha1.BuilderPlaygroundDeployment, scheme *runtime.Scheme) *appsv1.StatefulSet {
+// 	labels := map[string]string{"app": builderPlaygroundDeployment.Name}
+
+// 	containers := buildContainers(builderPlaygroundDeployment)
+
+
+// 	return &appsv1.StatefulSet{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name:      builderPlaygroundDeployment.Name,
+// 			Namespace: builderPlaygroundDeployment.Namespace,
+// 		},
+// 		Spec: appsv1.StatefulSetSpec{
+// 			ServiceName: builderPlaygroundDeployment.Name,
+// 			Replicas:    int32Ptr(1),
+// 			Selector: &metav1.LabelSelector{
+// 				MatchLabels: labels,
+// 			},
+// 			Template: corev1.PodTemplateSpec{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Labels: labels,
+// 				},
+// 				Spec: corev1.PodSpec{
+// 					Volumes: []corev1.Volume{{
+// 						Name: "artifacts",
+// 						VolumeSource: corev1.VolumeSource{
+// 							HostPath: &corev1.HostPathVolumeSource{
+// 								Path: builderPlaygroundDeployment.Spec.Storage.Path,
+// 								Type: hostPathTypePtr("Directory"),
+// 							},
+// 						},
+// 					}},
+// 					InitContainers: []corev1.Container{{
+// 						Name:    "check-artifacts-dir",
+// 						Image:   "busybox:1.37",
+// 						Command: []string{"sh", "-c", "test -d /artifacts"},
+// 						VolumeMounts: []corev1.VolumeMount{{
+// 							Name:      "artifacts",
+// 							MountPath: "/artifacts",
+// 						}},
+// 					}},					
+// 					Containers: containers,
+// 				},
+// 			},
+// 		},
+// 	}
+// }
 
 // This is used for StatefulSet YAML file
 func generateStatefulSetManifest(builderPlaygroundDeployment *builderplaygroundv1alpha1.BuilderPlaygroundDeployment) *appsv1.StatefulSet {
