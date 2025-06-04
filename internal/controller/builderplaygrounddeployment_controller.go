@@ -163,7 +163,7 @@ func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygrou
 	// Init container to check directory (applies in both cases)
 	initContainers = []corev1.Container{{
     	Name:  "prepare-artifacts",
-    	Image: " golang:1.24",
+    	Image: "golang:1.24",
     	Command: []string{
     		"sh", "-c",
     		`if [ "$(find /artifacts/output -mindepth 1 ! -name 'lost+found' -print -quit 2>/dev/null)" = "" ]; then
