@@ -25,6 +25,8 @@ import (
     "path/filepath"
 
     "sigs.k8s.io/yaml"
+    "k8s.io/apimachinery/pkg/api/resource"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	// "k8s.io/apimachinery/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
@@ -133,7 +135,7 @@ func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygrou
 				AccessModes: []corev1.PersistentVolumeAccessMode{
 					corev1.ReadWriteOnce,
 				},
-				Resources: corev1.ResourceRequirements{
+				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceStorage: resource.MustParse(builderPlaygroundDeployment.Spec.Storage.Size),
 					},
@@ -185,10 +187,7 @@ func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygrou
             fi`,
     	},
 		
-    	VolumeMounts: []corev1.VolumeMount{{
-    		Name:      "artifacts",
-    		MountPath: "/artifacts",
-    	}},
+    	VolumeMounts: volumeMounts,
     }}
 
     // initContainers = []corev1.Container{{
