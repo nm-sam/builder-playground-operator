@@ -189,7 +189,7 @@ func generateStatefulSetForOperator(builderPlaygroundDeployment *builderplaygrou
     		Name:      "artifacts",
     		MountPath: "/artifacts",
     	}},
-    }})
+    }}
 
     // initContainers = []corev1.Container{{
 	// 	Name:    "check-artifacts-dir",
